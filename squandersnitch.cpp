@@ -11,7 +11,6 @@
 #include <cstdarg>
 #include <dlfcn.h>
 #include <array>
-
 #include <cstdlib>
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -35,7 +34,7 @@ using namespace std::chrono_literals;
 namespace default_threshold {
 const signed long slowTimeUsThreshold = 1000;
 const std::size_t sizeThreshold = 10000000;
-};
+}; // namespace default_threshold
 
 static unsigned long toLong(const char* const s, unsigned long defaultValue)
 {
@@ -59,8 +58,8 @@ static unsigned long toLong(const char* const s, unsigned long defaultValue)
 
 /** Ignored return value **/
 template<typename T>
-void ignored_result(T) {
-}
+void ignored_result(T)
+{}
 
 /** Class aimed to spot slow functions or big allocation spots. **/
 class WarnSlow
@@ -270,5 +269,19 @@ extern "C"
     void* memset(void* s, int c, size_t n)
     {
         return forward_libc_size<decltype(memset)*>("memset", std::size_t(n), s, c, n);
+    }
+
+    // Only aimed to detect main() entry point.
+
+    int __libc_start_main(int*(main)(int, char**, char**),
+                          int argc,
+                          char** argv,
+                          void (*init)(void),
+                          void (*fini)(void),
+                          void (*rtld_fini)(void),
+                          void(*stack_end))
+    {
+        return forward_libc<decltype(__libc_start_main)*>(
+            "__libc_start_main", main, argc, argv, init, fini, rtld_fini, stack_end);
     }
 };
